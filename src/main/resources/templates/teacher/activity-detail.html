@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>活动详情 - 校园活动管理系统</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}">
+</head>
+<body>
+<main class="container">
+    <h1 th:text="${activity.title}">活动详情</h1>
+    <p class="message" th:if="${success}" th:text="${success}"></p>
+    <p class="error" th:if="${error}" th:text="${error}"></p>
+
+    <dl>
+        <dt>状态</dt><dd th:text="${activity.status}">DRAFT</dd>
+        <dt>说明</dt><dd th:text="${activity.description}">活动说明</dd>
+        <dt>地点</dt><dd th:text="${activity.location}">活动地点</dd>
+        <dt>报名截止</dt><dd th:text="${#temporals.format(activity.registrationDeadline, 'yyyy-MM-dd HH:mm')}"></dd>
+        <dt>开始时间</dt><dd th:text="${#temporals.format(activity.startTime, 'yyyy-MM-dd HH:mm')}"></dd>
+        <dt>结束时间</dt><dd th:text="${#temporals.format(activity.endTime, 'yyyy-MM-dd HH:mm')}"></dd>
+        <dt>容量</dt><dd th:text="${activity.capacity}">30</dd>
+    </dl>
+
+    <section class="actions" th:if="${activity.status.name() == 'DRAFT'}">
+        <a th:href="@{/teacher/activities/{id}/edit(id=${activity.id})}">编辑草稿</a>
+        <form th:action="@{/teacher/activities/{id}/delete(id=${activity.id})}" method="post">
+            <button type="submit">删除草稿</button>
+        </form>
+        <form th:action="@{/teacher/activities/{id}/publish(id=${activity.id})}" method="post">
+            <button type="submit">发布活动</button>
+        </form>
+    </section>
+
+    <section th:if="${activity.status.name() == 'PUBLISHED'}">
+        <p>报名名单功能将在 Task 7 实现。</p>
+        <form th:action="@{/teacher/activities/{id}/close(id=${activity.id})}" method="post">
+            <button type="submit">关闭活动</button>
+        </form>
+    </section>
+
+    <p th:if="${activity.status.name() == 'CLOSED'}">该活动已关闭，当前为只读状态。</p>
+    <p><a th:href="@{/teacher/activities}">返回我的活动</a></p>
+</main>
+</body>
+</html>

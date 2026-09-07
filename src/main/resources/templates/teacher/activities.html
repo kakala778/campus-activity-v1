@@ -3,14 +3,54 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>教师首页 - 校园活动管理系统</title>
+    <title>我的活动 - 校园活动管理系统</title>
     <link rel="stylesheet" th:href="@{/css/style.css}">
 </head>
 <body>
 <main class="container">
-    <h1>教师首页</h1>
+    <h1>我的活动</h1>
     <p>你好，<span th:text="${session.LOGIN_USER_NAME}">教师</span>。</p>
-    <p>活动管理功能将在后续任务中实现。</p>
+    <p class="message" th:if="${success}" th:text="${success}"></p>
+    <p class="error" th:if="${error}" th:text="${error}"></p>
+
+    <p><a href="/teacher/activities/new" th:href="@{/teacher/activities/new}">新建活动</a></p>
+
+    <p th:if="${#lists.isEmpty(activities)}">暂时没有活动。</p>
+    <table th:unless="${#lists.isEmpty(activities)}">
+        <thead>
+        <tr>
+            <th>标题</th>
+            <th>状态</th>
+            <th>开始时间</th>
+            <th>操作</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr th:each="activity : ${activities}">
+            <td th:text="${activity.title}">活动标题</td>
+            <td th:text="${activity.status}">DRAFT</td>
+            <td th:text="${#temporals.format(activity.startTime, 'yyyy-MM-dd HH:mm')}">2026-10-02 09:00</td>
+            <td class="actions">
+                <a th:href="@{/teacher/activities/{id}(id=${activity.id})}">查看</a>
+                <a th:if="${activity.status.name() == 'DRAFT'}"
+                   th:href="@{/teacher/activities/{id}/edit(id=${activity.id})}">编辑</a>
+                <form th:if="${activity.status.name() == 'DRAFT'}"
+                      th:action="@{/teacher/activities/{id}/delete(id=${activity.id})}" method="post">
+                    <button type="submit">删除</button>
+                </form>
+                <form th:if="${activity.status.name() == 'DRAFT'}"
+                      th:action="@{/teacher/activities/{id}/publish(id=${activity.id})}" method="post">
+                    <button type="submit">发布</button>
+                </form>
+                <form th:if="${activity.status.name() == 'PUBLISHED'}"
+                      th:action="@{/teacher/activities/{id}/close(id=${activity.id})}" method="post">
+                    <button type="submit">关闭</button>
+                </form>
+            </td>
+        </tr>
+        </tbody>
+    </table>
+
     <form th:action="@{/logout}" method="post">
         <button type="submit">退出登录</button>
     </form>

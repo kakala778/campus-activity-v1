@@ -6,7 +6,7 @@ body {
 }
 
 .container {
-    max-width: 520px;
+    max-width: 820px;
     margin: 48px auto;
     padding: 24px;
     background: #fff;
@@ -20,6 +20,7 @@ form {
 
 input,
 select,
+textarea,
 button {
     box-sizing: border-box;
     width: 100%;
@@ -38,4 +39,42 @@ button {
 
 .error {
     color: #b00020;
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 16px 0;
+}
+
+th,
+td {
+    padding: 8px;
+    border: 1px solid #ddd;
+    text-align: left;
+}
+
+.actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    align-items: center;
+}
+
+.actions form {
+    display: inline-block;
+}
+
+.actions button {
+    width: auto;
+    margin: 0;
+}
+
+dt {
+    font-weight: bold;
+    margin-top: 10px;
+}
+
+dd {
+    margin-left: 0;
 }

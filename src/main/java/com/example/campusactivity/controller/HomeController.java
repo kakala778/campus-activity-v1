@@ -28,8 +28,4 @@ public class HomeController {
         return "student/activities";
     }
 
-    @GetMapping("/teacher/activities")
-    public String teacherHome() {
-        return "teacher/activities";
-    }
 }

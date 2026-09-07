@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title th:text="${editing} ? '编辑草稿 - 校园活动管理系统' : '新建活动 - 校园活动管理系统'">活动表单</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}">
+</head>
+<body>
+<main class="container">
+    <h1 th:text="${editing} ? '编辑草稿' : '新建活动'">活动表单</h1>
+    <p class="error" th:if="${error}" th:text="${error}"></p>
+
+    <form th:action="${editing} ? @{/teacher/activities/{id}/edit(id=${activityId})} : @{/teacher/activities}"
+          th:object="${activityForm}" method="post">
+        <p class="error" th:if="${#fields.hasAnyErrors()}">请填写完整且合法的活动信息</p>
+
+        <label for="title">标题</label>
+        <input id="title" type="text" th:field="*{title}" required>
+
+        <label for="description">活动说明</label>
+        <textarea id="description" th:field="*{description}" rows="5" required></textarea>
+
+        <label for="location">地点</label>
+        <input id="location" type="text" th:field="*{location}" required>
+
+        <label for="registrationDeadline">报名截止时间</label>
+        <input id="registrationDeadline" type="datetime-local" th:field="*{registrationDeadline}" required>
+
+        <label for="startTime">开始时间</label>
+        <input id="startTime" type="datetime-local" th:field="*{startTime}" required>
+
+        <label for="endTime">结束时间</label>
+        <input id="endTime" type="datetime-local" th:field="*{endTime}" required>
+
+        <label for="capacity">容量</label>
+        <input id="capacity" type="number" min="1" th:field="*{capacity}" required>
+
+        <button type="submit" th:text="${editing} ? '保存修改' : '创建草稿'">提交</button>
+    </form>
+
+    <p><a th:href="@{/teacher/activities}">返回我的活动</a></p>
+</main>
+</body>
+</html>
