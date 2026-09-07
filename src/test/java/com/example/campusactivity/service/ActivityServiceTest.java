@@ -220,6 +220,58 @@ class ActivityServiceTest {
         assertThat(activityService.listTeacherActivities(TEACHER_ID)).containsExactly(ownActivity);
     }
 
+    @Test
+    void studentListReturnsPublishedActivitiesInRepositoryStartOrder() {
+        Activity first = activity(teacher, ActivityStatus.PUBLISHED);
+        first.setTitle("先开始的活动");
+        Activity second = activity(teacher, ActivityStatus.PUBLISHED);
+        second.setTitle("后开始的活动");
+        when(activityRepository.findByStatusOrderByStartTimeAsc(ActivityStatus.PUBLISHED))
+                .thenReturn(List.of(first, second));
+
+        assertThat(activityService.listPublishedActivities()).containsExactly(first, second);
+        verify(activityRepository).findByStatusOrderByStartTimeAsc(ActivityStatus.PUBLISHED);
+    }
+
+    @Test
+    void publishedActivityDetailIsAvailableToStudents() {
+        Activity published = activity(teacher, ActivityStatus.PUBLISHED);
+        when(activityRepository.findByIdAndStatus(ACTIVITY_ID, ActivityStatus.PUBLISHED))
+                .thenReturn(Optional.of(published));
+
+        assertThat(activityService.getPublishedActivity(ACTIVITY_ID)).isSameAs(published);
+    }
+
+    @Test
+    void draftActivityDetailIsNotAvailableToStudents() {
+        when(activityRepository.findByIdAndStatus(ACTIVITY_ID, ActivityStatus.PUBLISHED))
+                .thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> activityService.getPublishedActivity(ACTIVITY_ID))
+                .isInstanceOf(BusinessException.class);
+    }
+
+    @Test
+    void closedActivityDetailIsNotAvailableToStudents() {
+        when(activityRepository.findByIdAndStatus(ACTIVITY_ID, ActivityStatus.PUBLISHED))
+                .thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> activityService.getPublishedActivity(ACTIVITY_ID))
+                .isInstanceOf(BusinessException.class);
+    }
+
+    @Test
+    void deadlinePassedPublishedActivityRemainsReadable() {
+        Activity expiredButPublished = activity(teacher, ActivityStatus.PUBLISHED);
+        expiredButPublished.setRegistrationDeadline(LocalDateTime.of(2026, 1, 1, 12, 0));
+        expiredButPublished.setStartTime(LocalDateTime.of(2026, 1, 2, 9, 0));
+        expiredButPublished.setEndTime(LocalDateTime.of(2026, 1, 2, 11, 0));
+        when(activityRepository.findByIdAndStatus(ACTIVITY_ID, ActivityStatus.PUBLISHED))
+                .thenReturn(Optional.of(expiredButPublished));
+
+        assertThat(activityService.getPublishedActivity(ACTIVITY_ID)).isSameAs(expiredButPublished);
+    }
+
     private ActivityForm validForm(String title) {
         ActivityForm form = new ActivityForm();
         form.setTitle(title);

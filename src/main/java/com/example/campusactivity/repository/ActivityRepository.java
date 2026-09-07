@@ -11,6 +11,8 @@ public interface ActivityRepository extends JpaRepository<Activity, Long> {
 
     List<Activity> findByStatusOrderByStartTimeAsc(ActivityStatus status);
 
+    Optional<Activity> findByIdAndStatus(Long id, ActivityStatus status);
+
     List<Activity> findByCreatorIdOrderByCreatedAtDesc(Long creatorId);
 
     Optional<Activity> findByIdAndCreatorId(Long id, Long creatorId);

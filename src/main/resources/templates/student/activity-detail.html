@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>活动详情 - 校园活动管理系统</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}">
+</head>
+<body>
+<main class="container">
+    <h1 th:text="${activity.title}">活动详情</h1>
+
+    <dl>
+        <dt>描述</dt><dd th:text="${activity.description}">活动说明</dd>
+        <dt>地点</dt><dd th:text="${activity.location}">活动地点</dd>
+        <dt>报名截止时间</dt>
+        <dd th:text="${#temporals.format(activity.registrationDeadline, 'yyyy-MM-dd HH:mm')}"></dd>
+        <dt>开始时间</dt>
+        <dd th:text="${#temporals.format(activity.startTime, 'yyyy-MM-dd HH:mm')}"></dd>
+        <dt>结束时间</dt>
+        <dd th:text="${#temporals.format(activity.endTime, 'yyyy-MM-dd HH:mm')}"></dd>
+        <dt>人数上限</dt><dd th:text="${activity.capacity}">30</dd>
+    </dl>
+
+    <p>报名功能将在下一阶段提供。</p>
+    <p><a th:href="@{/student/activities}">返回活动列表</a></p>
+</main>
+</body>
+</html>

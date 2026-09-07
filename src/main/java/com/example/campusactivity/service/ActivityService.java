@@ -89,6 +89,15 @@ public class ActivityService {
         return getOwnedActivity(teacherId, activityId);
     }
 
+    public List<Activity> listPublishedActivities() {
+        return activityRepository.findByStatusOrderByStartTimeAsc(ActivityStatus.PUBLISHED);
+    }
+
+    public Activity getPublishedActivity(Long activityId) {
+        return activityRepository.findByIdAndStatus(activityId, ActivityStatus.PUBLISHED)
+                .orElseThrow(() -> new BusinessException("活动不存在或未发布"));
+    }
+
     private User requireTeacher(Long teacherId) {
         User user = userRepository.findById(teacherId)
                 .orElseThrow(() -> new BusinessException("用户不存在"));

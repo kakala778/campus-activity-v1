@@ -23,9 +23,4 @@ public class HomeController {
         return "redirect:/login";
     }
 
-    @GetMapping("/student/activities")
-    public String studentHome() {
-        return "student/activities";
-    }
-
 }
