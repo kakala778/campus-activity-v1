@@ -39,7 +39,10 @@ public class StudentController {
             model.addAttribute("registrationStatus", registrationService.getStatus(studentId(session), activity));
             return "student/activity-detail";
         } catch (BusinessException ex) {
-            redirectAttributes.addFlashAttribute("error", ex.getMessage());
+            Object existingError = model.getAttribute("error");
+            redirectAttributes.addFlashAttribute(
+                    "error", existingError != null ? existingError : ex.getMessage()
+            );
             return "redirect:/student/activities";
         }
     }

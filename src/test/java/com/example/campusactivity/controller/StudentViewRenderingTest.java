@@ -5,6 +5,7 @@ import com.example.campusactivity.entity.Activity;
 import com.example.campusactivity.entity.ActivityStatus;
 import com.example.campusactivity.entity.User;
 import com.example.campusactivity.entity.UserRole;
+import com.example.campusactivity.exception.BusinessException;
 import com.example.campusactivity.service.ActivityService;
 import com.example.campusactivity.service.RegistrationService;
 import org.junit.jupiter.api.Test;
@@ -13,6 +14,7 @@ import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.MvcResult;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -20,6 +22,7 @@ import java.util.List;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.not;
 import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.doThrow;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
@@ -98,6 +101,29 @@ class StudentViewRenderingTest {
                 .andExpect(status().is3xxRedirection())
                 .andExpect(redirectedUrl("/student/activities/" + ACTIVITY_ID))
                 .andExpect(flash().attribute("success", "报名成功"));
+    }
+
+    @Test
+    void closedRegistrationKeepsSpecificReasonWhenDetailRedirectsToList() throws Exception {
+        doThrow(new BusinessException("只有已发布活动可以报名"))
+                .when(registrationService).register(30L, ACTIVITY_ID);
+        when(activityService.getPublishedActivity(ACTIVITY_ID))
+                .thenThrow(new BusinessException("活动不存在或未发布"));
+
+        MvcResult postResult = mockMvc.perform(post("/student/activities/{id}/register", ACTIVITY_ID)
+                        .sessionAttr("LOGIN_USER_ID", 30L)
+                        .sessionAttr("LOGIN_USER_ROLE", UserRole.STUDENT))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/student/activities/" + ACTIVITY_ID))
+                .andReturn();
+
+        mockMvc.perform(get("/student/activities/{id}", ACTIVITY_ID)
+                        .sessionAttr("LOGIN_USER_ID", 30L)
+                        .sessionAttr("LOGIN_USER_ROLE", UserRole.STUDENT)
+                        .flashAttrs(postResult.getFlashMap()))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/student/activities"))
+                .andExpect(flash().attribute("error", "只有已发布活动可以报名"));
     }
 
     private void assertUnavailableStatus(RegistrationStatusView registrationStatus,
