@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>注册 - 校园活动管理系统</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}">
+</head>
+<body>
+<main class="container">
+    <h1>注册</h1>
+
+    <p class="error" th:if="${error}" th:text="${error}"></p>
+    <form th:action="@{/register}" th:object="${registerForm}" method="post">
+        <p class="error" th:if="${#fields.hasAnyErrors()}">请完整填写注册信息</p>
+
+        <label for="username">用户名</label>
+        <input id="username" type="text" th:field="*{username}" autocomplete="username" required>
+
+        <label for="password">密码</label>
+        <input id="password" type="password" th:field="*{password}" autocomplete="new-password" required>
+
+        <label for="name">姓名</label>
+        <input id="name" type="text" th:field="*{name}" required>
+
+        <label for="role">角色</label>
+        <select id="role" th:field="*{role}" required>
+            <option value="">请选择角色</option>
+            <option value="STUDENT">学生</option>
+            <option value="TEACHER">教师</option>
+        </select>
+
+        <button type="submit">注册</button>
+    </form>
+
+    <p><a th:href="@{/login}">返回登录</a></p>
+</main>
+</body>
+</html>

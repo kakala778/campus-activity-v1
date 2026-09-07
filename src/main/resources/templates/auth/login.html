@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>登录 - 校园活动管理系统</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}">
+</head>
+<body>
+<main class="container">
+    <h1>校园活动管理系统</h1>
+    <h2>登录</h2>
+
+    <p class="message" th:if="${success}" th:text="${success}"></p>
+    <p class="error" th:if="${error}" th:text="${error}"></p>
+    <form th:action="@{/login}" th:object="${loginForm}" method="post">
+        <p class="error" th:if="${#fields.hasAnyErrors()}">请完整填写用户名和密码</p>
+
+        <label for="username">用户名</label>
+        <input id="username" type="text" th:field="*{username}" autocomplete="username" required>
+
+        <label for="password">密码</label>
+        <input id="password" type="password" th:field="*{password}" autocomplete="current-password" required>
+
+        <button type="submit">登录</button>
+    </form>
+
+    <p><a th:href="@{/register}">没有账号？前往注册</a></p>
+</main>
+</body>
+</html>

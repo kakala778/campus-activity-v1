@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>教师首页 - 校园活动管理系统</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}">
+</head>
+<body>
+<main class="container">
+    <h1>教师首页</h1>
+    <p>你好，<span th:text="${session.LOGIN_USER_NAME}">教师</span>。</p>
+    <p>活动管理功能将在后续任务中实现。</p>
+    <form th:action="@{/logout}" method="post">
+        <button type="submit">退出登录</button>
+    </form>
+</main>
+</body>
+</html>

@@ -1,0 +1,41 @@
+body {
+    margin: 0;
+    background: #f5f5f5;
+    color: #222;
+    font-family: Arial, "Microsoft YaHei", sans-serif;
+}
+
+.container {
+    max-width: 520px;
+    margin: 48px auto;
+    padding: 24px;
+    background: #fff;
+    border: 1px solid #ddd;
+}
+
+form {
+    display: grid;
+    gap: 10px;
+}
+
+input,
+select,
+button {
+    box-sizing: border-box;
+    width: 100%;
+    padding: 9px;
+    font: inherit;
+}
+
+button {
+    margin-top: 6px;
+    cursor: pointer;
+}
+
+.message {
+    color: #176b2c;
+}
+
+.error {
+    color: #b00020;
+}
