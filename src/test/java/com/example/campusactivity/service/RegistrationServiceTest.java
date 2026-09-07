@@ -18,12 +18,15 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Optional;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.inOrder;
+import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -192,6 +195,168 @@ class RegistrationServiceTest {
         assertThat(status.canRegister()).isFalse();
     }
 
+    @Test
+    void studentListContainsOnlyOwnRegistrationsInRepositoryOrder() {
+        Registration newest = registration(student, activity, LocalDateTime.now());
+        Registration older = registration(student, activity, LocalDateTime.now().minusHours(1));
+        when(registrationRepository.findByStudentIdOrderByRegisteredAtDesc(STUDENT_ID))
+                .thenReturn(List.of(newest, older));
+
+        assertThat(registrationService.listStudentRegistrations(STUDENT_ID))
+                .containsExactly(newest, older);
+    }
+
+    @Test
+    void closedActivityRegistrationRemainsInStudentList() {
+        activity.setStatus(ActivityStatus.CLOSED);
+        Registration closedRegistration = registration(student, activity, LocalDateTime.now());
+        when(registrationRepository.findByStudentIdOrderByRegisteredAtDesc(STUDENT_ID))
+                .thenReturn(List.of(closedRegistration));
+
+        assertThat(registrationService.listStudentRegistrations(STUDENT_ID))
+                .containsExactly(closedRegistration);
+    }
+
+    @Test
+    void studentCanCancelOwnPublishedRegistrationBeforeDeadline() {
+        Registration registration = registration(student, activity, LocalDateTime.now());
+        when(registrationRepository.findByStudentIdAndActivityId(STUDENT_ID, ACTIVITY_ID))
+                .thenReturn(Optional.of(registration));
+
+        registrationService.cancel(STUDENT_ID, ACTIVITY_ID);
+
+        verify(registrationRepository).delete(registration);
+    }
+
+    @Test
+    void studentCanRegisterAgainAfterCancellation() {
+        Registration existing = registration(student, activity, LocalDateTime.now());
+        AtomicBoolean registered = new AtomicBoolean(true);
+        when(registrationRepository.findByStudentIdAndActivityId(STUDENT_ID, ACTIVITY_ID))
+                .thenReturn(Optional.of(existing));
+        doAnswer(invocation -> {
+            registered.set(false);
+            return null;
+        }).when(registrationRepository).delete(existing);
+        when(userService.getRequiredUser(STUDENT_ID)).thenReturn(student);
+        when(activityRepository.findById(ACTIVITY_ID)).thenReturn(Optional.of(activity));
+        when(registrationRepository.existsByStudentIdAndActivityId(STUDENT_ID, ACTIVITY_ID))
+                .thenAnswer(invocation -> registered.get());
+        when(registrationRepository.countByActivityId(ACTIVITY_ID)).thenReturn(0L);
+        when(registrationRepository.save(any(Registration.class)))
+                .thenAnswer(invocation -> invocation.getArgument(0));
+
+        registrationService.cancel(STUDENT_ID, ACTIVITY_ID);
+        Registration newRegistration = registrationService.register(STUDENT_ID, ACTIVITY_ID);
+
+        assertThat(newRegistration.getStudent()).isSameAs(student);
+        assertThat(newRegistration.getActivity()).isSameAs(activity);
+    }
+
+    @Test
+    void cancellationAfterDeadlineIsRejectedWithoutDeleting() {
+        activity = activity(ActivityStatus.PUBLISHED, 30, LocalDateTime.now().minusMinutes(1));
+        Registration registration = registration(student, activity, LocalDateTime.now().minusDays(1));
+        when(registrationRepository.findByStudentIdAndActivityId(STUDENT_ID, ACTIVITY_ID))
+                .thenReturn(Optional.of(registration));
+
+        assertThatThrownBy(() -> registrationService.cancel(STUDENT_ID, ACTIVITY_ID))
+                .isInstanceOf(BusinessException.class)
+                .hasMessage("报名截止后不能取消报名");
+        verify(registrationRepository, never()).delete(any());
+    }
+
+    @Test
+    void closedActivityRegistrationCannotBeCancelled() {
+        activity.setStatus(ActivityStatus.CLOSED);
+        Registration registration = registration(student, activity, LocalDateTime.now());
+        when(registrationRepository.findByStudentIdAndActivityId(STUDENT_ID, ACTIVITY_ID))
+                .thenReturn(Optional.of(registration));
+
+        assertThatThrownBy(() -> registrationService.cancel(STUDENT_ID, ACTIVITY_ID))
+                .isInstanceOf(BusinessException.class)
+                .hasMessage("只有已发布活动可以取消报名");
+        verify(registrationRepository, never()).delete(any());
+    }
+
+    @Test
+    void studentCannotCancelAnotherStudentsOrMissingRegistration() {
+        when(registrationRepository.findByStudentIdAndActivityId(STUDENT_ID, ACTIVITY_ID))
+                .thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> registrationService.cancel(STUDENT_ID, ACTIVITY_ID))
+                .isInstanceOf(BusinessException.class)
+                .hasMessage("报名记录不存在或无权取消");
+        verify(registrationRepository, never()).delete(any());
+    }
+
+    @Test
+    void teacherCanReadOwnActivityRegistrationListAndCount() {
+        User teacher = activity.getCreator();
+        Registration registration = registration(student, activity, LocalDateTime.now());
+        when(activityRepository.findByIdAndCreatorId(ACTIVITY_ID, teacher.getId()))
+                .thenReturn(Optional.of(activity));
+        when(registrationRepository.findByActivityIdOrderByRegisteredAtAsc(ACTIVITY_ID))
+                .thenReturn(List.of(registration));
+        when(registrationRepository.countByActivityId(ACTIVITY_ID)).thenReturn(1L);
+
+        assertThat(registrationService.listActivityRegistrations(teacher.getId(), ACTIVITY_ID))
+                .containsExactly(registration);
+        assertThat(registrationService.countActivityRegistrations(teacher.getId(), ACTIVITY_ID))
+                .isEqualTo(1L);
+    }
+
+    @Test
+    void anotherTeacherCannotReadRegistrationListOrCount() {
+        when(activityRepository.findByIdAndCreatorId(ACTIVITY_ID, 20L)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> registrationService.listActivityRegistrations(20L, ACTIVITY_ID))
+                .isInstanceOf(BusinessException.class)
+                .hasMessage("活动不存在或无权访问");
+        assertThatThrownBy(() -> registrationService.countActivityRegistrations(20L, ACTIVITY_ID))
+                .isInstanceOf(BusinessException.class)
+                .hasMessage("活动不存在或无权访问");
+        verify(registrationRepository, never()).findByActivityIdOrderByRegisteredAtAsc(any());
+        verify(registrationRepository, never()).countByActivityId(any());
+    }
+
+    @Test
+    void teacherCanStillReadRegistrationsAfterActivityCloses() {
+        activity.setStatus(ActivityStatus.CLOSED);
+        User teacher = activity.getCreator();
+        Registration registration = registration(student, activity, LocalDateTime.now());
+        when(activityRepository.findByIdAndCreatorId(ACTIVITY_ID, teacher.getId()))
+                .thenReturn(Optional.of(activity));
+        when(registrationRepository.findByActivityIdOrderByRegisteredAtAsc(ACTIVITY_ID))
+                .thenReturn(List.of(registration));
+
+        assertThat(registrationService.listActivityRegistrations(teacher.getId(), ACTIVITY_ID))
+                .containsExactly(registration);
+    }
+
+    @Test
+    void publishedRegistrationBeforeDeadlineCanBeCancelled() {
+        Registration registration = registration(student, activity, LocalDateTime.now());
+
+        assertThat(registrationService.canCancel(registration)).isTrue();
+    }
+
+    @Test
+    void closedRegistrationIsShownAsNotCancellable() {
+        activity.setStatus(ActivityStatus.CLOSED);
+        Registration registration = registration(student, activity, LocalDateTime.now());
+
+        assertThat(registrationService.canCancel(registration)).isFalse();
+    }
+
+    @Test
+    void expiredRegistrationIsShownAsNotCancellable() {
+        activity = activity(ActivityStatus.PUBLISHED, 30, LocalDateTime.now().minusMinutes(1));
+        Registration registration = registration(student, activity, LocalDateTime.now().minusDays(1));
+
+        assertThat(registrationService.canCancel(registration)).isFalse();
+    }
+
     private void arrangeValidRegistration() {
         when(userService.getRequiredUser(STUDENT_ID)).thenReturn(student);
         when(activityRepository.findById(ACTIVITY_ID)).thenReturn(Optional.of(activity));
@@ -226,5 +391,11 @@ class RegistrationServiceTest {
         activity.setStatus(status);
         ReflectionTestUtils.setField(activity, "id", ACTIVITY_ID);
         return activity;
+    }
+
+    private Registration registration(User owner, Activity registeredActivity, LocalDateTime registeredAt) {
+        Registration registration = new Registration(owner, registeredActivity);
+        ReflectionTestUtils.setField(registration, "registeredAt", registeredAt);
+        return registration;
     }
 }

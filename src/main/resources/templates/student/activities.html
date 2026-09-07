@@ -10,6 +10,7 @@
 <main class="container">
     <h1>可浏览活动</h1>
     <p>你好，<span th:text="${session.LOGIN_USER_NAME}">学生</span>。</p>
+    <p><a th:href="@{/student/registrations}">我的报名</a></p>
     <p class="error" th:if="${error}" th:text="${error}"></p>
 
     <p th:if="${#lists.isEmpty(activities)}">当前没有已发布活动。</p>

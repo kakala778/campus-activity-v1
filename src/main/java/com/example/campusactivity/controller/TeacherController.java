@@ -5,6 +5,7 @@ import com.example.campusactivity.entity.Activity;
 import com.example.campusactivity.entity.ActivityStatus;
 import com.example.campusactivity.exception.BusinessException;
 import com.example.campusactivity.service.ActivityService;
+import com.example.campusactivity.service.RegistrationService;
 import jakarta.servlet.http.HttpSession;
 import jakarta.validation.Valid;
 import org.springframework.stereotype.Controller;
@@ -22,9 +23,11 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 public class TeacherController {
 
     private final ActivityService activityService;
+    private final RegistrationService registrationService;
 
-    public TeacherController(ActivityService activityService) {
+    public TeacherController(ActivityService activityService, RegistrationService registrationService) {
         this.activityService = activityService;
+        this.registrationService = registrationService;
     }
 
     @GetMapping
@@ -150,6 +153,23 @@ public class TeacherController {
             redirectAttributes.addFlashAttribute("error", ex.getMessage());
         }
         return detailRedirect(id);
+    }
+
+    @GetMapping("/{id}/registrations")
+    public String registrations(@PathVariable Long id, HttpSession session, Model model,
+                                RedirectAttributes redirectAttributes) {
+        Long teacherId = teacherId(session);
+        try {
+            model.addAttribute("activity", activityService.getTeacherActivity(teacherId, id));
+            model.addAttribute("registrations",
+                    registrationService.listActivityRegistrations(teacherId, id));
+            model.addAttribute("registrationCount",
+                    registrationService.countActivityRegistrations(teacherId, id));
+            return "teacher/registrations";
+        } catch (BusinessException ex) {
+            redirectAttributes.addFlashAttribute("error", ex.getMessage());
+            return "redirect:/teacher/activities";
+        }
     }
 
     private Long teacherId(HttpSession session) {

@@ -2,9 +2,11 @@ package com.example.campusactivity.controller;
 
 import com.example.campusactivity.entity.Activity;
 import com.example.campusactivity.entity.ActivityStatus;
+import com.example.campusactivity.entity.Registration;
 import com.example.campusactivity.entity.User;
 import com.example.campusactivity.entity.UserRole;
 import com.example.campusactivity.service.ActivityService;
+import com.example.campusactivity.service.RegistrationService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
@@ -33,6 +35,9 @@ class TeacherViewRenderingTest {
 
     @MockitoBean
     private ActivityService activityService;
+
+    @MockitoBean
+    private RegistrationService registrationService;
 
     @Test
     void teacherListRendersRealActivityManagementPage() throws Exception {
@@ -71,6 +76,7 @@ class TeacherViewRenderingTest {
                         .sessionAttr("LOGIN_USER_ROLE", UserRole.TEACHER))
                 .andExpect(status().isOk())
                 .andExpect(content().string(containsString("关闭活动")))
+                .andExpect(content().string(containsString("查看报名名单")))
                 .andExpect(content().string(not(containsString("编辑草稿"))))
                 .andExpect(content().string(not(containsString("删除草稿"))));
     }
@@ -85,9 +91,30 @@ class TeacherViewRenderingTest {
                         .sessionAttr("LOGIN_USER_ROLE", UserRole.TEACHER))
                 .andExpect(status().isOk())
                 .andExpect(content().string(containsString("只读")))
+                .andExpect(content().string(containsString("查看报名名单")))
                 .andExpect(content().string(not(containsString("编辑草稿"))))
                 .andExpect(content().string(not(containsString("删除草稿"))))
                 .andExpect(content().string(not(containsString("关闭活动"))));
+    }
+
+    @Test
+    void registrationListShowsStudentsAndCapacityCount() throws Exception {
+        Activity activity = activity(ActivityStatus.PUBLISHED);
+        Registration registration = registration(activity);
+        when(activityService.getTeacherActivity(TEACHER_ID, ACTIVITY_ID)).thenReturn(activity);
+        when(registrationService.listActivityRegistrations(TEACHER_ID, ACTIVITY_ID))
+                .thenReturn(List.of(registration));
+        when(registrationService.countActivityRegistrations(TEACHER_ID, ACTIVITY_ID)).thenReturn(1L);
+
+        mockMvc.perform(get("/teacher/activities/{id}/registrations", ACTIVITY_ID)
+                        .sessionAttr("LOGIN_USER_ID", TEACHER_ID)
+                        .sessionAttr("LOGIN_USER_ROLE", UserRole.TEACHER))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("报名名单")))
+                .andExpect(content().string(containsString("1 / 30")))
+                .andExpect(content().string(containsString("测试学生")))
+                .andExpect(content().string(containsString("student")))
+                .andExpect(content().string(containsString("2026-09-01 10:00")));
     }
 
     private Activity activity(ActivityStatus status) {
@@ -103,5 +130,12 @@ class TeacherViewRenderingTest {
         activity.setStatus(status);
         ReflectionTestUtils.setField(activity, "id", ACTIVITY_ID);
         return activity;
+    }
+
+    private Registration registration(Activity activity) {
+        User student = new User("student", "hash", "测试学生", UserRole.STUDENT);
+        Registration registration = new Registration(student, activity);
+        ReflectionTestUtils.setField(registration, "registeredAt", LocalDateTime.of(2026, 9, 1, 10, 0));
+        return registration;
     }
 }

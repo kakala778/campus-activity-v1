@@ -1,8 +1,10 @@
 package com.example.campusactivity.controller;
 
 import com.example.campusactivity.dto.RegistrationStatusView;
+import com.example.campusactivity.dto.StudentRegistrationView;
 import com.example.campusactivity.entity.Activity;
 import com.example.campusactivity.entity.ActivityStatus;
+import com.example.campusactivity.entity.Registration;
 import com.example.campusactivity.entity.User;
 import com.example.campusactivity.entity.UserRole;
 import com.example.campusactivity.exception.BusinessException;
@@ -109,6 +111,47 @@ class StudentControllerTest {
 
         assertThat(view).isEqualTo("redirect:/student/activities/" + ACTIVITY_ID);
         assertThat(redirect.getFlashAttributes().get("error")).isEqualTo("活动报名人数已满");
+    }
+
+    @Test
+    void myRegistrationsShowsOnlyCurrentStudentsServiceResults() {
+        Registration registration = new Registration(
+                new User("student", "hash", "学生甲", UserRole.STUDENT),
+                activity(ActivityStatus.PUBLISHED)
+        );
+        when(registrationService.listStudentRegistrations(30L)).thenReturn(List.of(registration));
+        when(registrationService.canCancel(registration)).thenReturn(true);
+        ConcurrentModel model = new ConcurrentModel();
+
+        String view = controller.myRegistrations(session, model);
+
+        assertThat(view).isEqualTo("student/my-registrations");
+        assertThat(model.getAttribute("registrations"))
+                .isEqualTo(List.of(new StudentRegistrationView(registration, true)));
+    }
+
+    @Test
+    void successfulCancellationReturnsToMyRegistrations() {
+        RedirectAttributesModelMap redirect = new RedirectAttributesModelMap();
+
+        String view = controller.cancel(ACTIVITY_ID, session, redirect);
+
+        verify(registrationService).cancel(30L, ACTIVITY_ID);
+        assertThat(view).isEqualTo("redirect:/student/registrations");
+        assertThat(redirect.getFlashAttributes().get("success")).isEqualTo("已取消报名");
+    }
+
+    @Test
+    void rejectedCancellationReturnsToMyRegistrationsWithReason() {
+        doThrow(new BusinessException("只有已发布活动可以取消报名"))
+                .when(registrationService).cancel(30L, ACTIVITY_ID);
+        RedirectAttributesModelMap redirect = new RedirectAttributesModelMap();
+
+        String view = controller.cancel(ACTIVITY_ID, session, redirect);
+
+        assertThat(view).isEqualTo("redirect:/student/registrations");
+        assertThat(redirect.getFlashAttributes().get("error"))
+                .isEqualTo("只有已发布活动可以取消报名");
     }
 
     private Activity activity(ActivityStatus status) {

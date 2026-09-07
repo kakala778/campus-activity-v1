@@ -1,8 +1,10 @@
 package com.example.campusactivity.controller;
 
 import com.example.campusactivity.dto.RegistrationStatusView;
+import com.example.campusactivity.dto.StudentRegistrationView;
 import com.example.campusactivity.entity.Activity;
 import com.example.campusactivity.entity.ActivityStatus;
+import com.example.campusactivity.entity.Registration;
 import com.example.campusactivity.entity.User;
 import com.example.campusactivity.entity.UserRole;
 import com.example.campusactivity.exception.BusinessException;
@@ -56,7 +58,8 @@ class StudentViewRenderingTest {
                 .andExpect(content().string(containsString("可浏览活动")))
                 .andExpect(content().string(containsString("测试活动")))
                 .andExpect(content().string(containsString("教学楼 A101")))
-                .andExpect(content().string(containsString("查看详情")));
+                .andExpect(content().string(containsString("查看详情")))
+                .andExpect(content().string(containsString("我的报名")));
     }
 
     @Test
@@ -126,6 +129,51 @@ class StudentViewRenderingTest {
                 .andExpect(flash().attribute("error", "只有已发布活动可以报名"));
     }
 
+    @Test
+    void myRegistrationsRendersFieldsAndCancellationButton() throws Exception {
+        Registration registration = registration(ActivityStatus.PUBLISHED);
+        when(registrationService.listStudentRegistrations(30L)).thenReturn(List.of(registration));
+        when(registrationService.canCancel(registration)).thenReturn(true);
+
+        mockMvc.perform(get("/student/registrations")
+                        .sessionAttr("LOGIN_USER_ID", 30L)
+                        .sessionAttr("LOGIN_USER_ROLE", UserRole.STUDENT))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("我的报名")))
+                .andExpect(content().string(containsString("测试活动")))
+                .andExpect(content().string(containsString("PUBLISHED")))
+                .andExpect(content().string(containsString("教学楼 A101")))
+                .andExpect(content().string(containsString("2026-09-01 10:00")))
+                .andExpect(content().string(containsString("action=\"/student/registrations/100/cancel\"")))
+                .andExpect(content().string(containsString("取消报名")));
+    }
+
+    @Test
+    void closedRegistrationRemainsVisibleWithoutCancellationButton() throws Exception {
+        Registration registration = registration(ActivityStatus.CLOSED);
+        when(registrationService.listStudentRegistrations(30L)).thenReturn(List.of(registration));
+        when(registrationService.canCancel(registration)).thenReturn(false);
+
+        mockMvc.perform(get("/student/registrations")
+                        .sessionAttr("LOGIN_USER_ID", 30L)
+                        .sessionAttr("LOGIN_USER_ROLE", UserRole.STUDENT))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("测试活动")))
+                .andExpect(content().string(containsString("CLOSED")))
+                .andExpect(content().string(containsString("不可取消")))
+                .andExpect(content().string(not(containsString("action=\"/student/registrations/100/cancel\""))));
+    }
+
+    @Test
+    void postCancellationRedirectsToMyRegistrationsWithSuccessFlash() throws Exception {
+        mockMvc.perform(post("/student/registrations/{activityId}/cancel", ACTIVITY_ID)
+                        .sessionAttr("LOGIN_USER_ID", 30L)
+                        .sessionAttr("LOGIN_USER_ROLE", UserRole.STUDENT))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/student/registrations"))
+                .andExpect(flash().attribute("success", "已取消报名"));
+    }
+
     private void assertUnavailableStatus(RegistrationStatusView registrationStatus,
                                          String reason) throws Exception {
         Activity published = activity();
@@ -153,5 +201,13 @@ class StudentViewRenderingTest {
         activity.setStatus(ActivityStatus.PUBLISHED);
         ReflectionTestUtils.setField(activity, "id", ACTIVITY_ID);
         return activity;
+    }
+
+    private Registration registration(ActivityStatus status) {
+        User student = new User("student", "hash", "学生甲", UserRole.STUDENT);
+        Registration registration = new Registration(student, activity());
+        registration.getActivity().setStatus(status);
+        ReflectionTestUtils.setField(registration, "registeredAt", LocalDateTime.of(2026, 9, 1, 10, 0));
+        return registration;
     }
 }

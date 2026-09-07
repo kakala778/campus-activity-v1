@@ -33,13 +33,16 @@
     </section>
 
     <section th:if="${activity.status.name() == 'PUBLISHED'}">
-        <p>报名名单功能将在 Task 7 实现。</p>
+        <p><a th:href="@{/teacher/activities/{id}/registrations(id=${activity.id})}">查看报名名单</a></p>
         <form th:action="@{/teacher/activities/{id}/close(id=${activity.id})}" method="post">
             <button type="submit">关闭活动</button>
         </form>
     </section>
 
-    <p th:if="${activity.status.name() == 'CLOSED'}">该活动已关闭，当前为只读状态。</p>
+    <section th:if="${activity.status.name() == 'CLOSED'}">
+        <p>该活动已关闭，当前为只读状态。</p>
+        <p><a th:href="@{/teacher/activities/{id}/registrations(id=${activity.id})}">查看报名名单</a></p>
+    </section>
     <p><a th:href="@{/teacher/activities}">返回我的活动</a></p>
 </main>
 </body>

@@ -3,10 +3,12 @@ package com.example.campusactivity.controller;
 import com.example.campusactivity.dto.ActivityForm;
 import com.example.campusactivity.entity.Activity;
 import com.example.campusactivity.entity.ActivityStatus;
+import com.example.campusactivity.entity.Registration;
 import com.example.campusactivity.entity.User;
 import com.example.campusactivity.entity.UserRole;
 import com.example.campusactivity.exception.BusinessException;
 import com.example.campusactivity.service.ActivityService;
+import com.example.campusactivity.service.RegistrationService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -35,12 +37,15 @@ class TeacherControllerTest {
     @Mock
     private ActivityService activityService;
 
+    @Mock
+    private RegistrationService registrationService;
+
     private TeacherController controller;
     private MockHttpSession session;
 
     @BeforeEach
     void setUp() {
-        controller = new TeacherController(activityService);
+        controller = new TeacherController(activityService, registrationService);
         session = new MockHttpSession();
         session.setAttribute("LOGIN_USER_ID", TEACHER_ID);
     }
@@ -140,6 +145,37 @@ class TeacherControllerTest {
         assertThat(closeView).isEqualTo("redirect:/teacher/activities/" + ACTIVITY_ID);
     }
 
+    @Test
+    void registrationsShowsOnlyCurrentTeachersActivityData() {
+        Activity activity = activity(ActivityStatus.PUBLISHED);
+        Registration registration = registration(activity);
+        when(activityService.getTeacherActivity(TEACHER_ID, ACTIVITY_ID)).thenReturn(activity);
+        when(registrationService.listActivityRegistrations(TEACHER_ID, ACTIVITY_ID))
+                .thenReturn(List.of(registration));
+        when(registrationService.countActivityRegistrations(TEACHER_ID, ACTIVITY_ID)).thenReturn(1L);
+        ConcurrentModel model = new ConcurrentModel();
+
+        String view = controller.registrations(
+                ACTIVITY_ID, session, model, new RedirectAttributesModelMap());
+
+        assertThat(view).isEqualTo("teacher/registrations");
+        assertThat(model.getAttribute("activity")).isEqualTo(activity);
+        assertThat(model.getAttribute("registrations")).isEqualTo(List.of(registration));
+        assertThat(model.getAttribute("registrationCount")).isEqualTo(1L);
+    }
+
+    @Test
+    void registrationsRejectsAnotherTeachersActivity() {
+        when(activityService.getTeacherActivity(TEACHER_ID, ACTIVITY_ID))
+                .thenThrow(new BusinessException("活动不存在或无权访问"));
+        RedirectAttributesModelMap redirect = new RedirectAttributesModelMap();
+
+        String view = controller.registrations(ACTIVITY_ID, session, new ConcurrentModel(), redirect);
+
+        assertThat(view).isEqualTo("redirect:/teacher/activities");
+        assertThat(redirect.getFlashAttributes().get("error")).isEqualTo("活动不存在或无权访问");
+    }
+
     private Activity activity(ActivityStatus status) {
         User teacher = new User("teacher", "hash", "测试教师", UserRole.TEACHER);
         ReflectionTestUtils.setField(teacher, "id", TEACHER_ID);
@@ -165,6 +201,13 @@ class TeacherControllerTest {
         form.setEndTime(LocalDateTime.of(2026, 10, 2, 11, 0));
         form.setCapacity(30);
         return form;
+    }
+
+    private Registration registration(Activity activity) {
+        User student = new User("student", "hash", "测试学生", UserRole.STUDENT);
+        Registration registration = new Registration(student, activity);
+        ReflectionTestUtils.setField(registration, "registeredAt", LocalDateTime.of(2026, 9, 1, 10, 0));
+        return registration;
     }
 
     private BeanPropertyBindingResult bindingResult(ActivityForm form) {

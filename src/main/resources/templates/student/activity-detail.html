@@ -35,6 +35,7 @@
           th:action="@{/student/activities/{id}/register(id=${activity.id})}" method="post">
         <button type="submit">报名</button>
     </form>
+    <p><a th:href="@{/student/registrations}">我的报名</a></p>
     <p><a th:href="@{/student/activities}">返回活动列表</a></p>
 </main>
 </body>

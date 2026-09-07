@@ -1,5 +1,6 @@
 package com.example.campusactivity.controller;
 
+import com.example.campusactivity.dto.StudentRegistrationView;
 import com.example.campusactivity.exception.BusinessException;
 import com.example.campusactivity.service.ActivityService;
 import com.example.campusactivity.service.RegistrationService;
@@ -9,11 +10,9 @@ import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 @Controller
-@RequestMapping("/student/activities")
 public class StudentController {
 
     private final ActivityService activityService;
@@ -24,13 +23,13 @@ public class StudentController {
         this.registrationService = registrationService;
     }
 
-    @GetMapping
+    @GetMapping("/student/activities")
     public String list(Model model) {
         model.addAttribute("activities", activityService.listPublishedActivities());
         return "student/activities";
     }
 
-    @GetMapping("/{id}")
+    @GetMapping("/student/activities/{id}")
     public String detail(@PathVariable Long id, HttpSession session, Model model,
                          RedirectAttributes redirectAttributes) {
         try {
@@ -47,7 +46,7 @@ public class StudentController {
         }
     }
 
-    @PostMapping("/{id}/register")
+    @PostMapping("/student/activities/{id}/register")
     public String register(@PathVariable Long id, HttpSession session,
                            RedirectAttributes redirectAttributes) {
         try {
@@ -57,6 +56,30 @@ public class StudentController {
             redirectAttributes.addFlashAttribute("error", ex.getMessage());
         }
         return "redirect:/student/activities/" + id;
+    }
+
+    @GetMapping("/student/registrations")
+    public String myRegistrations(HttpSession session, Model model) {
+        var registrations = registrationService.listStudentRegistrations(studentId(session))
+                .stream()
+                .map(registration -> new StudentRegistrationView(
+                        registration, registrationService.canCancel(registration)
+                ))
+                .toList();
+        model.addAttribute("registrations", registrations);
+        return "student/my-registrations";
+    }
+
+    @PostMapping("/student/registrations/{activityId}/cancel")
+    public String cancel(@PathVariable Long activityId, HttpSession session,
+                         RedirectAttributes redirectAttributes) {
+        try {
+            registrationService.cancel(studentId(session), activityId);
+            redirectAttributes.addFlashAttribute("success", "已取消报名");
+        } catch (BusinessException ex) {
+            redirectAttributes.addFlashAttribute("error", ex.getMessage());
+        }
+        return "redirect:/student/registrations";
     }
 
     private Long studentId(HttpSession session) {

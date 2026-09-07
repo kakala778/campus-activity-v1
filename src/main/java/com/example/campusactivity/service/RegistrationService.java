@@ -13,6 +13,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Service
 @Transactional(readOnly = true)
@@ -63,5 +64,45 @@ public class RegistrationService {
         return new RegistrationStatusView(
                 registrationCount, alreadyRegistered, deadlinePassed, full
         );
+    }
+
+    public List<Registration> listStudentRegistrations(Long studentId) {
+        return registrationRepository.findByStudentIdOrderByRegisteredAtDesc(studentId);
+    }
+
+    @Transactional
+    public void cancel(Long studentId, Long activityId) {
+        Registration registration = registrationRepository
+                .findByStudentIdAndActivityId(studentId, activityId)
+                .orElseThrow(() -> new BusinessException("报名记录不存在或无权取消"));
+        Activity activity = registration.getActivity();
+        if (activity.getStatus() != ActivityStatus.PUBLISHED) {
+            throw new BusinessException("只有已发布活动可以取消报名");
+        }
+        if (LocalDateTime.now().isAfter(activity.getRegistrationDeadline())) {
+            throw new BusinessException("报名截止后不能取消报名");
+        }
+        registrationRepository.delete(registration);
+    }
+
+    public List<Registration> listActivityRegistrations(Long teacherId, Long activityId) {
+        requireOwnedActivity(teacherId, activityId);
+        return registrationRepository.findByActivityIdOrderByRegisteredAtAsc(activityId);
+    }
+
+    public long countActivityRegistrations(Long teacherId, Long activityId) {
+        requireOwnedActivity(teacherId, activityId);
+        return registrationRepository.countByActivityId(activityId);
+    }
+
+    public boolean canCancel(Registration registration) {
+        Activity activity = registration.getActivity();
+        return activity.getStatus() == ActivityStatus.PUBLISHED
+                && !LocalDateTime.now().isAfter(activity.getRegistrationDeadline());
+    }
+
+    private Activity requireOwnedActivity(Long teacherId, Long activityId) {
+        return activityRepository.findByIdAndCreatorId(activityId, teacherId)
+                .orElseThrow(() -> new BusinessException("活动不存在或无权访问"));
     }
 }

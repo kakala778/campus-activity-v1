@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>报名名单 - 校园活动管理系统</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}">
+</head>
+<body>
+<main class="container">
+    <h1 th:text="|${activity.title} - 报名名单|">报名名单</h1>
+    <p>当前报名人数：<span th:text="|${registrationCount} / ${activity.capacity}|">0 / 30</span></p>
+
+    <p th:if="${#lists.isEmpty(registrations)}">暂无学生报名。</p>
+    <table th:unless="${#lists.isEmpty(registrations)}">
+        <thead>
+        <tr>
+            <th>学生姓名</th>
+            <th>用户名</th>
+            <th>报名时间</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr th:each="registration : ${registrations}">
+            <td th:text="${registration.student.name}">学生姓名</td>
+            <td th:text="${registration.student.username}">username</td>
+            <td th:text="${#temporals.format(registration.registeredAt, 'yyyy-MM-dd HH:mm')}">2026-09-01 10:00</td>
+        </tr>
+        </tbody>
+    </table>
+
+    <p><a th:href="@{/teacher/activities/{id}(id=${activity.id})}">返回活动详情</a></p>
+</main>
+</body>
+</html>
