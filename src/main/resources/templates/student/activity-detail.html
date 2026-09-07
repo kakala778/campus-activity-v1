@@ -9,6 +9,8 @@
 <body>
 <main class="container">
     <h1 th:text="${activity.title}">活动详情</h1>
+    <p class="message" th:if="${success}" th:text="${success}"></p>
+    <p class="error" th:if="${error}" th:text="${error}"></p>
 
     <dl>
         <dt>描述</dt><dd th:text="${activity.description}">活动说明</dd>
@@ -20,9 +22,19 @@
         <dt>结束时间</dt>
         <dd th:text="${#temporals.format(activity.endTime, 'yyyy-MM-dd HH:mm')}"></dd>
         <dt>人数上限</dt><dd th:text="${activity.capacity}">30</dd>
+        <dt>当前报名人数</dt>
+        <dd th:text="${registrationStatus.registrationCount + ' / ' + activity.capacity}">0 / 30</dd>
     </dl>
 
-    <p>报名功能将在下一阶段提供。</p>
+    <p th:if="${registrationStatus.alreadyRegistered}">已报名</p>
+    <p th:if="${!registrationStatus.alreadyRegistered and registrationStatus.deadlinePassed}">报名已截止</p>
+    <p th:if="${!registrationStatus.alreadyRegistered and !registrationStatus.deadlinePassed and registrationStatus.full}">
+        人数已满
+    </p>
+    <form th:if="${registrationStatus.canRegister}"
+          th:action="@{/student/activities/{id}/register(id=${activity.id})}" method="post">
+        <button type="submit">报名</button>
+    </form>
     <p><a th:href="@{/student/activities}">返回活动列表</a></p>
 </main>
 </body>

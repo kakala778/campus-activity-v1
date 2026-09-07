@@ -1,10 +1,12 @@
 package com.example.campusactivity.controller;
 
+import com.example.campusactivity.dto.RegistrationStatusView;
 import com.example.campusactivity.entity.Activity;
 import com.example.campusactivity.entity.ActivityStatus;
 import com.example.campusactivity.entity.User;
 import com.example.campusactivity.entity.UserRole;
 import com.example.campusactivity.service.ActivityService;
+import com.example.campusactivity.service.RegistrationService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
@@ -19,7 +21,10 @@ import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.not;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.flash;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.redirectedUrl;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @WebMvcTest({StudentController.class, HomeController.class})
@@ -32,6 +37,9 @@ class StudentViewRenderingTest {
 
     @MockitoBean
     private ActivityService activityService;
+
+    @MockitoBean
+    private RegistrationService registrationService;
 
     @Test
     void studentListRendersPublishedActivityFieldsAndDetailLink() throws Exception {
@@ -49,9 +57,11 @@ class StudentViewRenderingTest {
     }
 
     @Test
-    void studentDetailRendersAllCoreFieldsWithoutRegistrationButton() throws Exception {
+    void availableActivityShowsRegistrationCountAndPostButton() throws Exception {
         Activity published = activity();
         when(activityService.getPublishedActivity(ACTIVITY_ID)).thenReturn(published);
+        when(registrationService.getStatus(30L, published))
+                .thenReturn(new RegistrationStatusView(2L, false, false, false));
 
         mockMvc.perform(get("/student/activities/{id}", ACTIVITY_ID)
                         .sessionAttr("LOGIN_USER_ID", 30L)
@@ -60,9 +70,48 @@ class StudentViewRenderingTest {
                 .andExpect(content().string(containsString("测试活动")))
                 .andExpect(content().string(containsString("活动说明")))
                 .andExpect(content().string(containsString("教学楼 A101")))
-                .andExpect(content().string(containsString("30")))
-                .andExpect(content().string(containsString("报名功能将在下一阶段提供")))
-                .andExpect(content().string(not(containsString("<button type=\"submit\">报名</button>"))));
+                .andExpect(content().string(containsString("2 / 30")))
+                .andExpect(content().string(containsString("action=\"/student/activities/100/register\"")))
+                .andExpect(content().string(containsString(">报名</button>")));
+    }
+
+    @Test
+    void alreadyRegisteredActivityShowsReasonWithoutButton() throws Exception {
+        assertUnavailableStatus(new RegistrationStatusView(1L, true, false, false), "已报名");
+    }
+
+    @Test
+    void deadlinePassedActivityShowsReasonWithoutButton() throws Exception {
+        assertUnavailableStatus(new RegistrationStatusView(0L, false, true, false), "报名已截止");
+    }
+
+    @Test
+    void fullActivityShowsReasonWithoutButton() throws Exception {
+        assertUnavailableStatus(new RegistrationStatusView(30L, false, false, true), "人数已满");
+    }
+
+    @Test
+    void postRegistrationRedirectsToDetailWithSuccessFlash() throws Exception {
+        mockMvc.perform(post("/student/activities/{id}/register", ACTIVITY_ID)
+                        .sessionAttr("LOGIN_USER_ID", 30L)
+                        .sessionAttr("LOGIN_USER_ROLE", UserRole.STUDENT))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/student/activities/" + ACTIVITY_ID))
+                .andExpect(flash().attribute("success", "报名成功"));
+    }
+
+    private void assertUnavailableStatus(RegistrationStatusView registrationStatus,
+                                         String reason) throws Exception {
+        Activity published = activity();
+        when(activityService.getPublishedActivity(ACTIVITY_ID)).thenReturn(published);
+        when(registrationService.getStatus(30L, published)).thenReturn(registrationStatus);
+
+        mockMvc.perform(get("/student/activities/{id}", ACTIVITY_ID)
+                        .sessionAttr("LOGIN_USER_ID", 30L)
+                        .sessionAttr("LOGIN_USER_ROLE", UserRole.STUDENT))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString(reason)))
+                .andExpect(content().string(not(containsString(">报名</button>"))));
     }
 
     private Activity activity() {
