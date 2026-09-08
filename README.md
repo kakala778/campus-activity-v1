@@ -1,8 +1,10 @@
 # 校园活动管理系统 V1.0
 
-本项目是《实验一：基于工程意图的软件迭代开发》的 V1.0 最小原型，用于验证“教师发布活动 → 学生浏览活动 → 学生报名 → 教师查看报名结果”的完整业务闭环，并保留需求、设计、实现、测试和 Git 历史之间的追踪关系。
+基于 Spring Boot 的校园活动管理最小原型，围绕“教师发布活动 → 学生浏览并报名 → 教师查看报名结果”这一核心业务闭环展开。
 
-## 已实现范围
+项目重点是完成一次从用户故事、需求分析、工程意图、设计、实现、测试到版本记录的可追踪软件工程迭代，而不是堆叠非核心功能或复杂界面。
+
+## 核心功能
 
 - 用户注册、登录、退出以及 `STUDENT` / `TEACHER` 角色访问控制；
 - 教师创建、查看、编辑、删除和发布 `DRAFT` 活动；
@@ -12,9 +14,7 @@
 - 教师查看本人活动的报名人数和学生名单，并关闭活动；
 - `DRAFT → PUBLISHED → CLOSED` 活动状态约束及资源所有权检查。
 
-V1.0 不包含管理员、审核、搜索、分类、推荐、评论、通知、签到、导出、报名审批、前后端分离、JWT、Vue/React、Redis、Docker或微服务。
-
-## 技术与环境要求
+## 技术栈与环境要求
 
 - JDK 21；
 - Maven 3.9 或兼容版本；
@@ -40,13 +40,15 @@ $env:DB_PASSWORD="你的 MySQL 密码"
 $env:DB_URL="jdbc:mysql://localhost:3306/campus_activity?createDatabaseIfNotExist=true&useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai"
 ```
 
-## 启动与测试
+## 运行
 
 启动应用：
 
 ```powershell
 mvn spring-boot:run
 ```
+
+## 测试
 
 执行完整自动测试：
 
@@ -62,6 +64,8 @@ mvn clean test
 - `docs/superpowers/specs/2026-09-06-campus-activity-v1-design.md`：已确认的 V1.0 设计规格；
 - `docs/verification.md`：最终测试、需求追踪、BUG 和 Git 证据。
 
-GitHub 仓库：[kakala778/campus-activity-v1](https://github.com/kakala778/campus-activity-v1)
+详细的需求追踪、测试结果和最终验证证据见 `docs/verification.md`。
 
-V1.0 已完成 REQ-01～REQ-06，并于 2026-09-07 使用 MySQL 8.4.11、真实 HTTP Session 和完整 Maven 测试通过最终验证。
+## 最小原型范围
+
+V1.0 只实现验证核心业务目标所必需的功能，不以功能数量为目标。管理员、活动审核、搜索、分类、筛选、推荐、评论、点赞、收藏、通知、邮件、短信、签到、二维码、报名审批、教师代报名或移除报名学生、Excel 导出、复杂 UI、前后端分离、JWT/OAuth、Redis、Docker、消息队列和微服务均不在本版本范围内。
